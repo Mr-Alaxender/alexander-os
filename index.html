@@ -2,306 +2,386 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ALAXENDER | Pro Web OS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Alaxender WhatsApp</title>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         :root {
-            --primary: #00f2ff;
-            --secondary: #7000ff;
-            --bg-dark: #05070a;
-            --card-bg: rgba(20, 25, 35, 0.9);
-            --text: #e2e8f0;
-            --sidebar: #0a0f1a;
+            --wa-green: #00a884;
+            --wa-bg: #0b141a;
+            --side-panel: #111b21;
+            --header-bg: #202c33;
+            --chat-bg: #0d141b;
+            --text-primary: #e9edef;
+            --text-muted: #8696a0;
+            --sent-msg: #005c4b;
+            --received-msg: #202c33;
         }
 
-        .light-mode {
-            --bg-dark: #f0f2f5; --text: #1a1c23; --sidebar: #ffffff; --card-bg: rgba(255, 255, 255, 0.9);
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--wa-bg);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: var(--bg-dark); color: var(--text); transition: 0.3s; height: 100vh; overflow: hidden; }
+        /* Loading & Auth Screens */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--wa-bg);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
 
-        /* --- AUTH SCREEN --- */
-        #authOverlay { position: fixed; inset: 0; z-index: 20000; background: radial-gradient(circle, #0a1128 0%, #05070a 100%); display: flex; align-items: center; justify-content: center; }
-        .auth-card { background: var(--card-bg); border: 1px solid var(--primary); padding: 40px; border-radius: 20px; width: 400px; text-align: center; backdrop-filter: blur(20px); }
-        .auth-toggle { display: flex; gap: 10px; margin-bottom: 25px; background: rgba(0,0,0,0.5); padding: 5px; border-radius: 50px; }
-        .auth-toggle button { flex: 1; padding: 10px; border: none; background: none; color: #fff; cursor: pointer; border-radius: 50px; transition: 0.3s; font-weight: bold; }
-        .auth-toggle button.active { background: var(--primary); color: #000; }
-        .auth-input { width: 100%; padding: 14px; margin-bottom: 15px; background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 10px; color: #fff; outline: none; }
-        .auth-btn { width: 100%; padding: 15px; background: linear-gradient(45deg, var(--primary), var(--secondary)); border: none; border-radius: 10px; color: #fff; font-weight: bold; cursor: pointer; letter-spacing: 2px; }
+        .brand-logo {
+            width: 120px;
+            height: 120px;
+            background: var(--wa-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 0 30px rgba(0, 168, 132, 0.3);
+        }
 
-        /* --- DASHBOARD LAYOUT --- */
-        #mainDashboard { display: none; height: 100vh; grid-template-columns: 260px 1fr; }
-        .sidebar { background: var(--sidebar); border-right: 1px solid rgba(0,242,255,0.1); padding: 25px; display: flex; flex-direction: column; }
-        .nav-link { padding: 12px; color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 12px; border-radius: 10px; margin-bottom: 5px; transition: 0.3s; }
-        .nav-link.active, .nav-link:hover { background: rgba(0, 242, 255, 0.1); color: var(--primary); }
+        .btn-main {
+            padding: 15px 40px;
+            border-radius: 30px;
+            border: none;
+            background: var(--wa-green);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
 
-        /* --- SECTIONS --- */
-        .section { display: none; padding: 30px; height: calc(100vh - 70px); overflow-y: auto; }
-        .section.active { display: block; }
-        .top-nav { height: 70px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+        .btn-main:hover { transform: scale(1.05); background: #008f72; }
 
-        /* --- SOCIAL GRID --- */
-        .social-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; margin-top: 20px; }
-        .social-item { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 15px; text-align: center; text-decoration: none; color: inherit; transition: 0.3s; border: 1px solid transparent; }
-        .social-item:hover { transform: translateY(-5px); border-color: var(--primary); }
-
-        /* --- CHAT --- */
-        #chatBox { background: var(--card-bg); height: 80vh; border-radius: 20px; display: flex; flex-direction: column; border: 1px solid #333; overflow: hidden; }
-        .chat-input { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.3); align-items: center; }
-        .chat-input input { flex: 1; background: transparent; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 8px; outline: none; }
-
-        /* --- MUSIC PLAYER --- */
-        #musicPlayer { position: fixed; bottom: 20px; right: 20px; background: var(--card-bg); border: 1px solid var(--primary); padding: 12px; border-radius: 15px; display: flex; align-items: center; gap: 15px; z-index: 1000; width: 280px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .player-controls button { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 16px; margin: 0 5px; }
+        /* PIN Pad Style */
+        .pin-container { display: flex; gap: 15px; margin: 30px 0; }
+        .pin-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--wa-green); }
+        .pin-dot.filled { background: var(--wa-green); box-shadow: 0 0 10px var(--wa-green); }
         
-        #welcomePopup { position: fixed; inset: 0; z-index: 30000; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .numpad { display: grid; grid-template-columns: repeat(3, 85px); gap: 15px; }
+        .num-key {
+            width: 75px; height: 75px; border-radius: 50%;
+            border: 1px solid #333; background: #232d36;
+            color: white; font-size: 28px; cursor: pointer;
+        }
+
+        /* Main Interface */
+        .app-main { display: none; width: 100%; height: 100vh; }
+        
+        .sidebar {
+            flex: 30%;
+            min-width: 350px;
+            background: var(--side-panel);
+            border-right: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-window {
+            flex: 70%;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-blend-mode: overlay;
+        }
+
+        /* Header UI */
+        .header {
+            height: 60px;
+            background: var(--header-bg);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Status Tray */
+        .status-tray {
+            display: flex;
+            padding: 15px;
+            gap: 15px;
+            overflow-x: auto;
+            background: var(--wa-bg);
+            border-bottom: 1px solid #222;
+        }
+
+        .status-item {
+            min-width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: 2px solid var(--wa-green);
+            padding: 3px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .status-item img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+
+        /* Message Bubbles */
+        .messages-area {
+            flex: 1;
+            padding: 20px 7%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bubble {
+            max-width: 65%;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14.5px;
+            line-height: 1.6;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .sent { align-self: flex-end; background: var(--sent-msg); border-top-right-radius: 0; }
+        .received { align-self: flex-start; background: var(--received-msg); border-top-left-radius: 0; }
+
+        /* Footer Input */
+        .chat-footer {
+            padding: 10px 20px;
+            background: var(--header-bg);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .input-holder {
+            flex: 1;
+            background: #2a3942;
+            border-radius: 25px;
+            padding: 5px 15px;
+            display: flex;
+        }
+
+        .input-holder input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 10px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .send-btn {
+            background: var(--wa-green);
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        /* Mobile View */
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; }
+            .chat-window { display: none; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="authOverlay">
-        <div class="auth-card">
-            <div class="auth-toggle">
-                <button id="loginTab" class="active" onclick="switchAuth('login')">LOGIN</button>
-                <button id="signupTab" onclick="switchAuth('signup')">SIGN UP</button>
-            </div>
-            <h2 id="authTitle" style="color:var(--primary); margin-bottom:10px;">ALAXENDER OS</h2>
-            <p id="authDesc" style="font-size:12px; margin-bottom:20px; color:#64748b;">Secure Terminal Access</p>
-            
-            <div id="signupFields" style="display:none;">
-                <input type="text" id="regName" class="auth-input" placeholder="Full Name">
-            </div>
-            <input type="email" id="authEmail" class="auth-input" placeholder="Email Address">
-            <input type="password" id="authPass" class="auth-input" placeholder="Password">
-            
-            <button class="auth-btn" onclick="handleAuth()">INITIALIZE SYSTEM</button>
-        </div>
+    <div id="welcome-scr" class="overlay">
+        <div class="brand-logo">A</div>
+        <h1 style="font-size: 32px; color: white;">Alaxender WhatsApp</h1>
+        <p style="color: var(--text-muted); margin: 15px 0 40px;">Professional Enterprise Edition</p>
+        <button class="btn-main" onclick="startAuth()">Continue to Chat</button>
     </div>
 
-    <div id="welcomePopup">
-        <div class="auth-card" style="border-width:2px;">
-            <i class="fa fa-shield-check" style="font-size:50px; color:var(--primary); margin-bottom:20px;"></i>
-            <h2 id="popName">WELCOME</h2>
-            <p style="color:#94a3b8; margin:15px 0;">Aapka data local vault mein safe aur encrypted rahega.</p>
-            <button class="auth-btn" onclick="closePopup()">ACCESS GRANTED</button>
+    <div id="pin-scr" class="overlay" style="display: none;">
+        <i class="fas fa-user-shield" style="font-size: 50px; color: var(--wa-green); margin-bottom: 20px;"></i>
+        <h2>Alaxender Security</h2>
+        <p style="color: var(--text-muted);">Confirm Identity</p>
+        <div class="pin-container" id="pin-dots">
+            <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
         </div>
+        <div class="numpad" id="numpad"></div>
     </div>
 
-    <div id="mainDashboard">
-        <aside class="sidebar">
-            <h2 style="color:var(--primary); font-style:italic; margin-bottom:30px;">ALAXENDER</h2>
-            <nav style="flex:1">
-                <div class="nav-link active" onclick="showSec('home')"><i class="fa fa-home"></i> Home</div>
-                <div class="nav-link" onclick="showSec('chat')"><i class="fa fa-comments"></i> Live Chat</div>
-                <div class="nav-link" onclick="showSec('cloud')"><i class="fa fa-cloud"></i> Storage</div>
-                <div class="nav-link" onclick="showSec('profile')"><i class="fa fa-user-cog"></i> Profile</div>
-                <div class="nav-link" onclick="showSec('settings')"><i class="fa fa-cog"></i> Settings</div>
-            </nav>
-            <div id="adminBadge" style="display:none; color:red; font-size:10px; font-weight:bold; margin-bottom:10px; text-align:center;"><i class="fa fa-crown"></i> ADMIN ACCESS</div>
-            <div style="font-size:11px; color:#64748b; text-align:center;">Uptime: <span id="sessionTime">0s</span></div>
-        </aside>
-
-        <main style="display:flex; flex-direction:column;">
-            <header class="top-nav">
-                <div style="position:relative; width:300px;">
-                    <i class="fa fa-search" style="position:absolute; left:12px; top:12px; color:var(--primary);"></i>
-                    <input type="text" placeholder="Search Encrypted Network..." style="width:100%; padding:10px 40px; background:rgba(255,255,255,0.05); border:1px solid #333; border-radius:20px; color:#fff; outline:none;">
-                </div>
-                <div style="display:flex; gap:20px; align-items:center;">
-                    <i class="fa fa-bell" style="color:var(--primary); cursor:pointer;"></i>
-                    <img id="navDP" src="https://ui-avatars.com/api/?name=U" style="width:35px; height:35px; border-radius:50%; border:1px solid var(--primary);">
-                </div>
-            </header>
-
-            <div id="homeSec" class="section active">
-                <h1 id="welcomeTxt">System Online</h1>
-                <p style="color:var(--primary);">Total Session Time: <span id="totalTime">00:00:00</span></p>
-
-                <h3 style="margin-top:40px; font-size:14px; color:#64748b;">QUICK ACCESS APPS</h3>
-                <div class="social-grid">
-                    <a href="https://facebook.com" target="_blank" class="social-item"><i class="fab fa-facebook" style="color:#1877F2; font-size:24px;"></i><br><small>Facebook</small></a>
-                    <a href="https://web.whatsapp.com" target="_blank" class="social-item"><i class="fab fa-whatsapp" style="color:#25D366; font-size:24px;"></i><br><small>WhatsApp</small></a>
-                    <a href="https://youtube.com" target="_blank" class="social-item"><i class="fab fa-youtube" style="color:red; font-size:24px;"></i><br><small>YouTube</small></a>
-                    <a href="https://instagram.com" target="_blank" class="social-item"><i class="fab fa-instagram" style="color:#E4405F; font-size:24px;"></i><br><small>Instagram</small></a>
+    <div class="app-main" id="app">
+        <div class="sidebar">
+            <div class="header">
+                <img src="https://img.icons8.com/color/96/administrator-male.png" width="40" style="border-radius: 50%;">
+                <h3 style="font-size: 16px;">Alaxender</h3>
+                <div style="display: flex; gap: 20px; color: var(--text-muted);">
+                    <i class="fas fa-circle-notch"></i><i class="fas fa-plus" onclick="document.getElementById('fileInp').click()"></i><i class="fas fa-ellipsis-v"></i>
                 </div>
             </div>
 
-            <div id="chatSec" class="section">
-                <div id="chatBox">
-                    <div id="msgFlow" style="flex:1; padding:20px; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
-                    <div class="chat-input">
-                        <button onclick="document.getElementById('chatFile').click()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa fa-paperclip"></i></button>
-                        <input type="file" id="chatFile" style="display:none" onchange="sendChatFile(this)">
-                        <input type="text" id="mInput" placeholder="Secure transmission..." onkeypress="if(event.key==='Enter') sendMsg()">
-                        <button onclick="startCall()" style="background:none; border:none; color:var(--primary); cursor:pointer;"><i class="fa fa-video"></i></button>
-                        <button class="btn auth-btn" style="width:auto; padding:10px 20px;" onclick="sendMsg()">SEND</button>
+            <div class="status-tray" id="tray">
+                <div class="status-item" onclick="document.getElementById('fileInp').click()">
+                    <img src="https://img.icons8.com/color/96/administrator-male.png">
+                    <div style="position:absolute; bottom:0; right:0; background:var(--wa-green); width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid var(--wa-bg); font-size:12px;">+</div>
+                </div>
+            </div>
+
+            <div style="flex: 1; overflow-y: auto;">
+                <div style="padding: 15px; display: flex; align-items: center; background: #2a3942; cursor: pointer;">
+                    <img src="https://img.icons8.com/fluency/96/meta-ai.png" width="55" style="border-radius: 50%;">
+                    <div style="margin-left: 15px; flex: 1;">
+                        <h4 style="display: flex; justify-content: space-between;">Meta AI Assistant <small style="color: var(--wa-green);">9:41 PM</small></h4>
+                        <p style="color: #0084ff; font-size: 13px;">Alaxender, how can I help you today?</p>
                     </div>
                 </div>
             </div>
-
-            <div id="cloudSec" class="section">
-                <h2>Cloud Vault</h2>
-                <div onclick="document.getElementById('vIn').click()" style="border:2px dashed var(--primary); padding:30px; border-radius:15px; text-align:center; cursor:pointer; margin-top:20px;">
-                    <i class="fa fa-upload"></i> <p>Upload Files</p>
-                    <input type="file" id="vIn" style="display:none" onchange="handleVault(this)">
-                </div>
-                <div id="vList" class="social-grid"></div>
-            </div>
-            
-            <div id="profileSec" class="section">
-                <div style="text-align:center;">
-                    <img id="profileDP" src="https://ui-avatars.com/api/?name=U" style="width:120px; height:120px; border-radius:50%; border:3px solid var(--primary);">
-                    <h2 id="pNameDisplay" style="margin-top:20px;">USER</h2>
-                    <button class="auth-btn" style="width:200px; margin-top:20px;" onclick="updateProfile()">EDIT PROFILE</button>
-                </div>
-            </div>
-
-            <div id="settingsSec" class="section">
-                <h2>System Settings</h2>
-                <button class="auth-btn" style="margin-top:20px; width:250px;" onclick="document.body.classList.toggle('light-mode')">Toggle Dark/Light Mode</button>
-                <br>
-                <button class="auth-btn" style="margin-top:20px; width:250px; background:red;" onclick="location.reload()">LOGOUT</button>
-            </div>
-        </main>
-    </div>
-
-    <div id="musicPlayer">
-        <div style="flex:1; overflow:hidden;"><marquee id="mTrack" style="font-size:12px;">No Song Loaded</marquee></div>
-        <div class="player-controls">
-            <button onclick="togglePlay()"><i class="fa fa-play" id="pBtn"></i></button>
-            <button onclick="document.getElementById('mUp').click()"><i class="fa fa-plus-circle"></i></button>
         </div>
-        <input type="file" id="mUp" style="display:none" accept="audio/*" onchange="loadMusic(this)">
+
+        <div class="chat-window">
+            <div class="header">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="https://img.icons8.com/fluency/96/meta-ai.png" width="40" style="border-radius: 50%;">
+                    <div>
+                        <h4 style="font-size: 15px;">Meta AI</h4>
+                        <small style="color: var(--wa-green);">Enterprise Assistant</small>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 25px; color: var(--text-muted); font-size: 18px;">
+                    <i class="fas fa-video"></i><i class="fas fa-phone"></i><i class="fas fa-search"></i>
+                </div>
+            </div>
+
+            <div class="messages-area" id="chat-box">
+                <div class="bubble received">
+                    Hello <b>Alaxender</b>! This is your professional WhatsApp Business dashboard. All systems are online.
+                </div>
+            </div>
+
+            <div class="chat-footer">
+                <i class="far fa-smile" style="font-size: 24px; color: var(--text-muted);"></i>
+                <div class="input-holder">
+                    <input type="text" id="msg-input" placeholder="Type a message to Meta AI...">
+                </div>
+                <button class="send-btn" onclick="handleSendMessage()"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
     </div>
 
-    <script>
-        const ADMIN_EMAIL = "muhammad.zain.apl@gmail.com";
-        const WORKER_URL = "https://calm-base-265c.muhammad-zain-apl.workers.dev/";
-        const pusher = new Pusher("19fc5065000d492b47d9", { cluster: "eu" });
-        const channel = pusher.subscribe('alexander-chat');
-        
-        let currentUser = { email: "", name: "", startTime: Date.now() };
-        let authMode = 'login';
-        let audio = new Audio();
+    <input type="file" id="fileInp" style="display: none;" onchange="handleStatusUpload(this)">
 
-        function switchAuth(mode) {
-            authMode = mode;
-            document.getElementById('loginTab').classList.toggle('active', mode==='login');
-            document.getElementById('signupTab').classList.toggle('active', mode==='signup');
-            document.getElementById('signupFields').style.display = mode==='signup' ? 'block' : 'none';
-        }
+<script>
+    let currentPin = "";
+    const CORRECT_PIN = "1234";
 
-        function handleAuth() {
-            const email = document.getElementById('authEmail').value;
-            const pass = document.getElementById('authPass').value;
-            if(!email || !pass) return alert("Fill all fields");
+    function startAuth() {
+        document.getElementById('welcome-scr').style.display = 'none';
+        document.getElementById('pin-scr').style.display = 'flex';
+        renderNumpad();
+    }
 
-            if(authMode === 'signup') {
-                const name = document.getElementById('regName').value;
-                localStorage.setItem('user_'+email, JSON.stringify({name, pass}));
-                alert("Account Created! Now Login.");
-                switchAuth('login');
+    function renderNumpad() {
+        const pad = document.getElementById('numpad');
+        pad.innerHTML = "";
+        for(let i=1; i<=9; i++) pad.innerHTML += `<button class="num-key" onclick="tapPin('${i}')">${i}</button>`;
+        pad.innerHTML += `<button class="num-key" onclick="currentPin=''">C</button>`;
+        pad.innerHTML += `<button class="num-key" onclick="tapPin('0')">0</button>`;
+        pad.innerHTML += `<button class="num-key" onclick="backspace()"><i class="fas fa-backspace"></i></button>`;
+    }
+
+    function tapPin(n) {
+        if(currentPin.length < 4) currentPin += n;
+        updatePinDots();
+        if(currentPin.length === 4) {
+            if(currentPin === CORRECT_PIN) {
+                unlockApp();
             } else {
-                const user = JSON.parse(localStorage.getItem('user_'+email));
-                if((user && user.pass === pass) || email === ADMIN_EMAIL) {
-                    currentUser.email = email;
-                    currentUser.name = user ? user.name : "Admin";
-                    document.getElementById('authOverlay').style.display = 'none';
-                    document.getElementById('welcomePopup').style.display = 'flex';
-                    document.getElementById('popName').innerText = "WELCOME, " + currentUser.name.toUpperCase();
-                    try { navigator.mediaDevices.getUserMedia({audio:true, video:true}); } catch(e){}
-                } else { alert("Wrong Credentials"); }
+                Swal.fire('Access Denied', 'Incorrect PIN. Please try again.', 'error');
+                currentPin = ""; updatePinDots();
             }
         }
+    }
 
-        function closePopup() {
-            document.getElementById('welcomePopup').style.display = 'none';
-            document.getElementById('mainDashboard').style.display = 'grid';
-            document.getElementById('pNameDisplay').innerText = currentUser.name;
-            if(currentUser.email === ADMIN_EMAIL) document.getElementById('adminBadge').style.display='block';
-            setInterval(updateTimers, 1000);
-        }
+    function updatePinDots() {
+        const dots = document.querySelectorAll('.pin-dot');
+        dots.forEach((dot, i) => dot.classList.toggle('filled', i < currentPin.length));
+    }
 
-        function updateTimers() {
-            const diff = Math.floor((Date.now() - currentUser.startTime)/1000);
-            document.getElementById('sessionTime').innerText = diff + "s";
-            let h=Math.floor(diff/3600).toString().padStart(2,'0'), m=Math.floor((diff%3600)/60).toString().padStart(2,'0'), s=(diff%60).toString().padStart(2,'0');
-            document.getElementById('totalTime').innerText = `${h}:${m}:${s}`;
-        }
+    function backspace() {
+        currentPin = currentPin.slice(0, -1);
+        updatePinDots();
+    }
 
-        function showSec(id) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.getElementById(id+'Sec').classList.add('active');
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            event.currentTarget.classList.add('active');
-        }
+    function unlockApp() {
+        document.getElementById('pin-scr').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        Swal.fire({ title: 'Welcome Alaxender!', icon: 'success', toast: true, position: 'top-end', timer: 3000, showConfirmButton: false });
+    }
 
-        // --- CHAT LOGIC ---
-        async function sendMsg() {
-            const m = document.getElementById('mInput');
-            if(!m.value) return;
-            appendMsg(currentUser.name, m.value, true);
-            await fetch(WORKER_URL, { method: "POST", body: JSON.stringify({ sender: currentUser.name, message: m.value })});
-            m.value = "";
-        }
+    function handleSendMessage() {
+        const inp = document.getElementById('msg-input');
+        if(!inp.value.trim()) return;
+        
+        appendMsg('Alaxender', inp.value, true);
+        const userText = inp.value;
+        inp.value = "";
 
-        channel.bind('new-message', d => { if(d.sender !== currentUser.name) appendMsg(d.sender, d.message, false); });
+        // Meta AI Reply Logic
+        setTimeout(() => {
+            appendMsg('Meta AI', `Alaxender, I am analyzing: "${userText}". How else can I assist your business?`, false);
+        }, 1000);
+    }
 
-        function appendMsg(s, t, isMe) {
-            const f = document.getElementById('msgFlow');
-            const d = document.createElement('div');
-            d.style.cssText = `padding:10px; border-radius:10px; max-width:75%; align-self:${isMe?'flex-end':'flex-start'}; background:${isMe?'var(--primary)':'#333'}; color:${isMe?'#000':'#fff'}; font-size:13px;`;
-            d.innerHTML = `<small style="display:block; font-size:9px; opacity:0.6;">${s}</small>${t}`;
-            f.appendChild(d); f.scrollTop = f.scrollHeight;
-        }
+    function appendMsg(sender, text, isMe) {
+        const box = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = `bubble ${isMe ? 'sent' : 'received'}`;
+        div.innerHTML = `
+            <small style="color: ${isMe ? '#a9ffd3' : 'var(--wa-green)'}; font-size: 11px; font-weight: bold;">${sender}</small><br>
+            ${text}
+            <div style="font-size: 10px; text-align: right; opacity: 0.6; margin-top: 5px;">
+                ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                ${isMe ? '<i class="fas fa-check-double" style="margin-left: 5px; color: #53bdeb;"></i>' : ''}
+            </div>
+        `;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
 
-        function sendChatFile(input) {
-            const file = input.files[0];
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                let html = file.type.includes('image') ? `<img src="${e.target.result}" style="width:180px; border-radius:10px;">` : `<a href="${e.target.result}" download style="color:blue;">${file.name}</a>`;
-                appendMsg(currentUser.name, html, true);
-                await fetch(WORKER_URL, { method: "POST", body: JSON.stringify({ sender: currentUser.name, message: html })});
-            };
-            reader.readAsDataURL(file);
-        }
+    function handleStatusUpload(input) {
+        if(!input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const tray = document.getElementById('tray');
+            tray.innerHTML += `
+                <div class="status-item">
+                    <img src="${e.target.result}">
+                </div>
+            `;
+            Swal.fire('Story Posted', 'Alaxender, your status is now live!', 'success');
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
 
-        // --- MUSIC ---
-        function loadMusic(input) {
-            const file = input.files[0];
-            audio.src = URL.createObjectURL(file);
-            document.getElementById('mTrack').innerText = file.name;
-            audio.play();
-            document.getElementById('pBtn').className = "fa fa-pause";
-        }
-
-        function togglePlay() {
-            if(audio.paused) { audio.play(); document.getElementById('pBtn').className="fa fa-pause"; }
-            else { audio.pause(); document.getElementById('pBtn').className="fa fa-play"; }
-        }
-
-        function startCall() { alert("Establishing Secure Video Link..."); }
-
-        function handleVault(input) {
-            const file = input.files[0];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const files = JSON.parse(localStorage.getItem('vault_'+currentUser.email)) || [];
-                files.push({name:file.name, data:e.target.result});
-                localStorage.setItem('vault_'+currentUser.email, JSON.stringify(files));
-                renderVault();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function renderVault() {
-            const list = document.getElementById('vList');
-            const files = JSON.parse(localStorage.getItem('vault_'+currentUser.email)) || [];
-            list.innerHTML = files.map(f => `<div class="social-item"><i class="fa fa-file"></i><br><small>${f.name}</small></div>`).join('');
-        }
-    </script>
+    // Enter Key Support
+    document.getElementById('msg-input').addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') handleSendMessage();
+    });
+</script>
 </body>
 </html>
